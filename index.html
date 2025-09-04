@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
+  <title>Free PS Shooter</title>
+
+  <!-- SEO Meta Tags -->
+  <meta name="description" content="Free PS Shooter — fast, lightweight browser shooting game. Play on Mobile, Tablet, Desktop." />
+  <meta name="keywords" content="free enemy shooting game, enemy shooter, web game, arcade shooter, by Sheikh Hozaifa" />
+  <meta name="author" content="Sheikh Hozaifa" />
+  <meta property="og:title" content="Free PS Shooter - Play Now" />
+  <meta property="og:description" content="Enjoy this free enemy shooting game directly in your browser." />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://raw.githubusercontent.com/sheikhhozaifa/freepsshooterkits/refs/heads/main/icon.png" />
+
+  <!-- JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "VideoGame",
+    "name": "Free PS Shooter",
+    "description": "Ads free enemy shooting web browser game by Sheikh Hozaifa.",
+    "genre": "Arcade",
+    "author": { "@type": "Person", "name": "Sheikh Hozaifa" },
+    "operatingSystem": "Any",
+    "applicationCategory": "Game",
+    "url": "https://sheikhhozaifa.github.io/Free-PS-Shooter/"
+  }
+  </script>
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/sheikhhozaifa/freepsshooterkits/refs/heads/main/icon.png">
+
+  <style>
+    html,body{
+      height:100%;margin:0;background:#000;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;
+      color:#fff;display:flex;align-items:center;justify-content:center;
+      -webkit-user-select:none; -moz-user-select:none; -ms-user-select:none; user-select:none;
+      -webkit-touch-callout:none; overscroll-behavior:none;
+    }
+    body.intro-active #game-root{
+      background:#000 !important;
+      background-image:none !important;
+    }
+    #game-root{
+      position:relative;width:100%;max-width:1000px;aspect-ratio:3/2;border-radius:12px;
+      overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.6);background:#000
+    }
+    canvas{width:100%;height:100%;display:block;background:transparent}
+    .hud{position:absolute;left:12px;top:12px;z-index:40;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .btn{background:rgba(0,0,0,.55);backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.06);
+      padding:8px 12px;border-radius:8px;color:#fff;cursor:pointer;white-space:nowrap}
+    .score{position:absolute;right:12px;top:12px;padding:8px 12px;background:rgba(0,0,0,.55);
+      border-radius:8px;z-index:40}
+    .donate-btn{background:#28a745 !important;font-weight:700}
+    .controls{
+      position:absolute;left:0;right:0;bottom:20px;display:flex;justify-content:space-between;
+      padding:0 20px;z-index:50;pointer-events:none
+    }
+    .control-pad{display:flex;gap:28px;pointer-events:auto}
+    .control-btn{
+      width:80px;height:80px;border-radius:14px;background:rgba(255,255,255,.08);
+      display:flex;align-items:center;justify-content:center;font-weight:700;font-size:20px;
+      user-select:none;touch-action:none
+    }
+    #intro{
+      position:fixed;inset:0;background:#000;z-index:100;display:flex;align-items:center;
+      justify-content:center;flex-direction:column;gap:10px;padding:24px;text-align:center
+    }
+    #intro h1{font-size:34px;margin:0}
+    #intro p{margin:0;opacity:.95}
+    @media (max-width:600px){
+      .control-btn{width:70px;height:70px;font-size:18px}
+      .control-pad{gap:22px}
+      .hud{flex-direction:column;align-items:flex-start}
+      .score{top:auto;bottom:12px;right:12px}
+    }
+    /* Game Over popup */
+    #game-over{
+      position:absolute;inset:0;background:rgba(0,0,0,.8);
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      gap:14px;color:#fff;font-size:26px;z-index:200;display:none
+    }
+    #game-over button{
+      padding:10px 20px;border-radius:8px;border:none;cursor:pointer;
+      background:#ff3333;color:#fff;font-size:18px;font-weight:bold
+    }
+  </style>
+</head>
+<body class="intro-active">
+  <div id="game-root">
+    <canvas id="game-canvas" style="visibility:hidden"></canvas>
+
+    <!-- HUD -->
+    <div class="hud">
+      <button id="toggle-music" class="btn">Unmute Music</button>
+      <button id="pause-btn" class="btn">Pause</button>
+      <button id="mute-sfx" class="btn">Mute SFX</button>
+      <button id="donate-btn" class="btn donate-btn">Donate Us</button>
+    </div>
+    <div class="score btn" id="score">Score: 0</div>
+
+    <!-- Mobile Controls -->
+    <div class="controls">
+      <div class="control-pad">
+        <div id="left-btn" class="control-btn">◄</div>
+        <div id="right-btn" class="control-btn">►</div>
+      </div>
+      <div class="control-pad">
+        <div id="shoot-btn" class="control-btn">Shoot</div>
+      </div>
+    </div>
+
+    <!-- Intro -->
+    <div id="intro">
+      <h1>Free PS Shooter</h1>
+      <p>Version 1.8</p>
+      <p>Developer: Sheikh Hozaifa</p>
+      <p>Game starts in <strong><span id="intro-timer">10</span></strong> seconds</p>
+      <p style="opacity:.9;margin-top:8px;font-size:13px">
+        Desktop: ← → + SPACE / Mouse • Mobile: buttons • TV: Left/Right + OK
+      </p>
+    </div>
+
+    <!-- Game Over -->
+    <div id="game-over">
+      <h2>Game Over</h2>
+      <p>Your Score: <span id="final-score">0</span></p>
+      <button id="restart-btn">Restart</button>
+    </div>
+  </div>
+
+<script>
+/* ========= CONFIG ========= */
+const CONFIG = {
+  canvasW: 960, canvasH: 640,
+  backgroundImageUrl: 'https://raw.githubusercontent.com/sheikhhozaifa/freepsshooterkits/refs/heads/main/background.png',
+  playerImageUrl: 'https://raw.githubusercontent.com/sheikhhozaifa/freepsshooterkits/refs/heads/main/player.png',
+  enemyImageUrl: 'https://raw.githubusercontent.com/sheikhhozaifa/freepsshooterkits/refs/heads/main/enemy.png',
+  shootSfxUrl: 'https://github.com/sheikhhozaifa/sounds/raw/refs/heads/main/Shoot.mp3',
+  hitSfxUrl:   'https://github.com/sheikhhozaifa/sounds/raw/refs/heads/main/Distroy.mp3',
+  bgMusicUrl:  'https://github.com/sheikhhozaifa/sounds/raw/refs/heads/main/bgmusic.mp3',
+  introSeconds: 10,
+  maxEnemies: 4,
+  enemySpeedMin: 40, enemySpeedMax: 120,
+  bulletSpeed: 700,
+  playerSpeed: 300,
+  explosionDuration: 0.6,
+  explosionParticles: 18
+};
+
+/* ========= Restrictions / Security ========= */
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('selectstart', e => e.preventDefault());
+document.addEventListener('dragstart', e => e.preventDefault());
+document.addEventListener('touchstart', e => { if(e.touches.length > 1) e.preventDefault(); }, {passive:false});
+document.addEventListener('gesturestart', e => e.preventDefault());
+
+(function devtoolsBlock(){
+  setInterval(function(){
+    if(window.outerWidth - window.innerWidth > 160 || window.outerHeight - window.innerHeight > 160){
+      document.body.innerHTML = "<h1 style='color:red;text-align:center;margin-top:20%'>DevTools detected! Access blocked.</h1>";
+    }
+  },1000);
+  document.onkeydown = function(e){
+    if(e.keyCode==123 || (e.ctrlKey && e.shiftKey && ['I','J','C'].includes(e.key.toUpperCase())) || (e.ctrlKey && e.key.toUpperCase()=='U')){
+      e.preventDefault();
+      return false;
+    }
+  }
+})();
+
+/* ========= Setup ========= */
+const root = document.getElementById('game-root');
+root.style.backgroundImage = `url('${CONFIG.backgroundImageUrl}')`;
+root.style.backgroundSize = 'cover';
+root.style.backgroundPosition = 'center';
+
+const canvas = document.getElementById('game-canvas');
+const ctx = canvas.getContext('2d', { alpha: true });
+canvas.width = CONFIG.canvasW;
+canvas.height = CONFIG.canvasH;
+
+const scoreEl = document.getElementById('score');
+const introEl = document.getElementById('intro');
+const introTimerEl = document.getElementById('intro-timer');
+const toggleMusicBtn = document.getElementById('toggle-music');
+const pauseBtn = document.getElementById('pause-btn');
+const muteSfxBtn = document.getElementById('mute-sfx');
+const donateBtn = document.getElementById('donate-btn');
+const gameOverEl = document.getElementById('game-over');
+const finalScoreEl = document.getElementById('final-score');
+const restartBtn = document.getElementById('restart-btn');
+
+let score = 0, running = false, paused = false, gameOver = false;
+
+/* ========= Audio ========= */
+const bgMusic = new Audio(CONFIG.bgMusicUrl);
+bgMusic.loop = true; bgMusic.volume = 0.45; bgMusic.muted = true;
+toggleMusicBtn.addEventListener('click', () => {
+  bgMusic.muted = !bgMusic.muted;
+  toggleMusicBtn.textContent = bgMusic.muted ? 'Unmute Music' : 'Mute Music';
+  if(!bgMusic.muted){ bgMusic.play().catch(()=>{}); }
+});
+let sfxMuted = false;
+muteSfxBtn.addEventListener('click', () => {
+  sfxMuted = !sfxMuted;
+  muteSfxBtn.textContent = sfxMuted ? 'Unmute SFX' : 'Mute SFX';
+});
+function playSfx(url){ if(sfxMuted) return; const a = new Audio(url); a.play().catch(()=>{}); }
+
+/* ========= Donate ========= */
+donateBtn.addEventListener('click', ()=>{
+  window.open("https://sheikhhozaifa.github.io/Donate-by-visiting-the-link/", "_blank", "noopener");
+});
+
+/* ========= Images ========= */
+const imgPlayer = new Image(); imgPlayer.src = CONFIG.playerImageUrl;
+const imgEnemy  = new Image(); imgEnemy.src  = CONFIG.enemyImageUrl;
+
+/* ========= Entities ========= */
+let player, bullets, enemies, explosions;
+function resetGame(){
+  player = { x: canvas.width/2, y: canvas.height - 90, w: 72, h: 72 };
+  bullets = []; enemies = []; explosions = [];
+  score = 0; scoreEl.textContent = 'Score: 0';
+  gameOver = false;
+  gameOverEl.style.display = 'none';
+  for(let i=0;i<2;i++) spawnEnemy();
+}
+
+function spawnEnemy(){
+  if(enemies.length >= CONFIG.maxEnemies) return;
+  const w = 58, h = 58;
+  const x = Math.random() * (canvas.width - w - 30) + 15;
+  const speed = CONFIG.enemySpeedMin + Math.random() * (CONFIG.enemySpeedMax - CONFIG.enemySpeedMin);
+  enemies.push({x, y: -h - (Math.random()*200), w, h, speed});
+}
+
+/* ========= Input ========= */
+const keys = {};
+window.addEventListener('keydown', e => {
+  keys[e.key] = true;
+  if((e.key === ' ' || e.key === 'Enter') && !paused && running && !gameOver){ e.preventDefault(); fireBullet(); }
+});
+window.addEventListener('keyup', e => { keys[e.key] = false; });
+
+canvas.addEventListener('click', ()=> { if(!paused && running && !gameOver) fireBullet(); });
+
+const leftBtn = document.getElementById('left-btn');
+const rightBtn = document.getElementById('right-btn');
+const shootBtn = document.getElementById('shoot-btn');
+
+leftBtn.addEventListener('pointerdown', ()=> keys.ArrowLeft = true);
+leftBtn.addEventListener('pointerup',   ()=> keys.ArrowLeft = false);
+leftBtn.addEventListener('pointerleave',()=> keys.ArrowLeft = false);
+
+rightBtn.addEventListener('pointerdown', ()=> keys.ArrowRight = true);
+rightBtn.addEventListener('pointerup',   ()=> keys.ArrowRight = false);
+rightBtn.addEventListener('pointerleave',()=> keys.ArrowRight = false);
+
+shootBtn.addEventListener('pointerdown', ()=> { if(!paused && running && !gameOver) fireBullet(); });
+
+pauseBtn.addEventListener('click', ()=> { if(!gameOver){ paused = !paused; pauseBtn.textContent = paused ? 'Resume' : 'Pause'; } });
+
+/* ========= Bullet ========= */
+function fireBullet(){
+  if(paused || !running || gameOver) return;
+  bullets.push({ x: player.x, y: player.y - player.h/2 - 8, w: 8, h: 18, vy: -CONFIG.bulletSpeed });
+  playSfx(CONFIG.shootSfxUrl);
+}
+
+/* ========= Explosion FX ========= */
+function spawnExplosion(cx, cy){
+  const parts = [];
+  for(let i=0;i<CONFIG.explosionParticles;i++){
+    const ang = Math.random()*Math.PI*2;
+    const speed = 80 + Math.random()*220;
+    parts.push({
+      x: cx, y: cy,
+      vx: Math.cos(ang)*speed,
+      vy: Math.sin(ang)*speed - 50,
+      life: CONFIG.explosionDuration,
+      size: 3 + Math.random()*6,
+      color: Math.random() < 0.5 ? "#8b0000" : "#b30000"
+    });
+  }
+  explosions.push({ parts });
+}
+function updateExplosions(dt){
+  for(let i=explosions.length-1;i>=0;i--){
+    const ex = explosions[i];
+    let alive = false;
+    for(const p of ex.parts){
+      if(p.life > 0){
+        alive = true;
+        p.life -= dt;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vy += 300*dt;
+        p.vx *= 0.96;
+        p.vy *= 0.96;
+      }
+    }
+    if(!alive) explosions.splice(i,1);
+  }
+}
+function drawExplosions(){
+  for(const ex of explosions){
+    for(const p of ex.parts){
+      if(p.life <= 0) continue;
+      const alpha = Math.max(0, p.life / CONFIG.explosionDuration);
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+  }
+}
+
+/* ========= Helper ========= */
+function rectIntersect(a,b){
+  return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+}
+
+/* ========= Loop ========= */
+let last = performance.now();
+function update(dt){
+  if(paused || gameOver) return;
+
+  let move = 0;
+  if(keys.ArrowLeft || keys.a) move -= 1;
+  if(keys.ArrowRight || keys.d) move += 1;
+  player.x += move * CONFIG.playerSpeed * dt;
+  player.x = Math.max(20, Math.min(canvas.width - 20, player.x));
+
+  for(let i=bullets.length-1;i>=0;i--){
+    const b = bullets[i]; b.y += b.vy * dt;
+    if(b.y + b.h < -20) bullets.splice(i,1);
+  }
+  for(let i=enemies.length-1;i>=0;i--){
+    const e = enemies[i]; e.y += e.speed * dt;
+    if(e.y > canvas.height + 50){ // enemy missed -> game over (enemy never powerful)
+      triggerGameOver();
+      return;
+    }
+  }
+  for(let i=enemies.length-1;i>=0;i--){
+    const e = enemies[i];
+    for(let j=bullets.length-1;j>=0;j--){
+      const b = bullets[j];
+      const boxB = {x: b.x - b.w/2, y: b.y - b.h/2, w: b.w, h: b.h};
+      const boxE = {x: e.x, y: e.y, w: e.w, h: e.h};
+      if(rectIntersect(boxB, boxE)){
+        bullets.splice(j,1);
+        score++; scoreEl.textContent = 'Score: ' + score;
+        playSfx(CONFIG.hitSfxUrl);
+        spawnExplosion(e.x + e.w/2, e.y + e.h/2);
+        enemies.splice(i,1); spawnEnemy();
+        break;
+      }
+    }
+  }
+  updateExplosions(dt);
+}
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  // Player
+  if(imgPlayer.complete) ctx.drawImage(imgPlayer, player.x - player.w/2, player.y - player.h/2, player.w, player.h);
+  else { ctx.fillStyle = '#fff'; ctx.fillRect(player.x - player.w/2, player.y - player.h/2, player.w, player.h); }
+  // Bullets
+  ctx.fillStyle='#ffd700';
+  for(const b of bullets){ ctx.fillRect(b.x - b.w/2, b.y - b.h/2, b.w, b.h); }
+  // Enemies
+  for(const e of enemies){
+    if(imgEnemy.complete) ctx.drawImage(imgEnemy, e.x, e.y, e.w, e.h);
+    else { ctx.fillStyle='#ff3333'; ctx.fillRect(e.x, e.y, e.w, e.h); }
+  }
+  drawExplosions();
+}
+function loop(now){
+  if(!running) return;
+  const dt = Math.min(0.05, (now - last)/1000);
+  last = now;
+  if(!paused && !gameOver) update(dt);
+  draw();
+  requestAnimationFrame(loop);
+}
+
+/* ========= Game Over ========= */
+function triggerGameOver(){
+  gameOver = true;
+  finalScoreEl.textContent = score;
+  gameOverEl.style.display = 'flex';
+}
+restartBtn.addEventListener('click', ()=>{
+  resetGame();
+});
+
+/* ========= Intro / Start ========= */
+function init(){
+  let t = CONFIG.introSeconds;
+  introTimerEl.textContent = t;
+  const countdown = setInterval(()=>{
+    t--; introTimerEl.textContent = t;
+    if(t<=0){
+      clearInterval(countdown);
+      introEl.style.display='none';
+      canvas.style.visibility = 'visible';
+      document.body.classList.remove('intro-active');
+      startGame();
+    }
+  },1000);
+
+  // Autoplay unlock on first interaction (mobile)
+  function firstInteraction(){
+    if(!bgMusic.muted) bgMusic.play().catch(()=>{});
+    window.removeEventListener('pointerdown', firstInteraction);
+    window.removeEventListener('keydown', firstInteraction);
+  }
+  window.addEventListener('pointerdown', firstInteraction);
+  window.addEventListener('keydown', firstInteraction);
+}
+function startGame(){
+  resetGame();
+  running = true; last = performance.now(); requestAnimationFrame(loop);
+}
+init();
+</script>
+</body>
+</html>
